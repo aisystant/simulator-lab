@@ -213,7 +213,7 @@ def cohort_bars_chart(rows: list[dict]) -> go.Figure:
             marker_color=STAGE_COLORS.get(n, "#6B7280"),
         ))
     fig.update_layout(
-        barmode="stack", title="Распр��деление ступеней в когорте",
+        barmode="stack", title="Распределение ступеней в когорте",
         xaxis_title="Неделя", yaxis_title="% участников",
         height=360, margin=dict(l=20, r=20, t=40, b=20),
         legend=dict(orientation="h", y=-0.25),
@@ -423,7 +423,7 @@ def main():
         page_icon="🔬",
         layout="wide",
     )
-    st.title("🔬 Лаборат��рия симуляций")
+    st.title("🔬 Лаборатория симуляций")
 
     # Sidebar
     with st.sidebar:
