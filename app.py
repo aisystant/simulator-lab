@@ -238,7 +238,7 @@ def render_pilot_mode(profile: SimulatorProfile):
     # Карточка текущего состояния
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Ст��пень", stage_name)
+        st.metric("Ступень", stage_name)
     with col2:
         st.metric("Часов накоплено", f"{profile.total_hours:.0f} ч")
     with col3:
@@ -363,7 +363,7 @@ def render_expert_mode(profile: SimulatorProfile):
         params["wp_completed_per_month"]      = c2.slider("РП в месяц",     0.0, 10.0, 1.0, 0.5, key="s2_wp")
         params["day_close_per_week"]          = c1.slider("Закрытий дня/нед", 0.0, 7.0, 3.0, 0.5, key="s2_dc")
         params["commit_created_per_week"]     = c2.slider("Коммитов в нед",  0.0, 30.0, 3.0, 1.0, key="s2_cc")
-        params["knowledge_extracted_per_week"]= c1.slider("Из��лечений знаний/нед", 0.0, 7.0, 1.0, 0.5, key="s2_ke")
+        params["knowledge_extracted_per_week"]= c1.slider("Извлечений знаний/нед", 0.0, 7.0, 1.0, 0.5, key="s2_ke")
 
     else:  # s3
         st.subheader("Тип когорты")
