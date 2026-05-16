@@ -61,20 +61,18 @@ async def load_profile(account_id: str, conn) -> SimulatorProfile:
     if not isinstance(evidence, dict):
         evidence = {}
 
-    bh = evidence.get("bh", {})
+    # stage_evaluator пишет плоский формат: {"s": 1, "t": 2, "m": 1, "w": 0, "a": 0, "stb": 1, ...}
+    s   = int(evidence.get("s", 0))
+    t   = int(evidence.get("t", 0))
+    m   = int(evidence.get("m", 0))
+    w   = int(evidence.get("w", 0))
+    a   = int(evidence.get("a", 0))
+    stb = int(evidence.get("stb", 0))
 
-    # Достаём bh-индексы из evidence; fallback 0
-    s   = int(bh.get("sys", 0))
-    t   = int(bh.get("inv", 0))
-    m   = int(bh.get("met", 0))
-    w   = int(bh.get("awr", 0))
-    a   = int(bh.get("agn", 0))
-    stb = int(bh.get("stb", 0))
-
-    # Сырые метрики если есть
+    # Сырые метрики
     hours_per_week = float(evidence.get("hours_per_week", 0.0))
     days_per_week  = float(evidence.get("days_per_week", 0.0))
-    total_hours    = float(evidence.get("cumulative_hours", 0.0))
+    total_hours    = float(evidence.get("total_hours", 0.0))
 
     return SimulatorProfile(
         account_id=account_id,
