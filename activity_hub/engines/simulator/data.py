@@ -67,7 +67,9 @@ async def load_profile(account_id: str, conn) -> SimulatorProfile:
     m   = int(evidence.get("m", 0))
     w   = int(evidence.get("w", 0))
     a   = int(evidence.get("a", 0))
-    stb = int(evidence.get("stb", 0))
+    # stb default=5: evaluator не всегда пишет stb в evidence (вычисляет внутренне).
+    # При отсутствии — не блокировать ступень через stb-gate; используем to_stage как якорь.
+    stb = int(evidence.get("stb", 5))
 
     # Сырые метрики
     hours_per_week = float(evidence.get("hours_per_week", 0.0))
