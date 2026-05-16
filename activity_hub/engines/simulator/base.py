@@ -29,6 +29,8 @@ class SimulatorProfile:
     max_gap_days: int = 30
     # Источник (real = Neon, preset = типовой профиль)
     source: str = "preset"
+    # Подтверждённая ступень: max(cp_assessments, stage_transitions)
+    confirmed_stage: int = 0
 
 
 @dataclass

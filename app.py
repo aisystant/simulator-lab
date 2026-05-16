@@ -93,6 +93,7 @@ def _load_profile_cached(account_id: str) -> dict:
                 "hours_per_week": profile.hours_per_week,
                 "days_per_week": profile.days_per_week,
                 "total_hours": profile.total_hours,
+                "confirmed_stage": profile.confirmed_stage,
                 "source": profile.source,
             }
         finally:
@@ -112,6 +113,7 @@ def _profile_from_dict(d: dict, account_id: str = "") -> SimulatorProfile:
         hours_per_week=d.get("hours_per_week", 0.0),
         days_per_week=d.get("days_per_week", 0.0),
         total_hours=d.get("total_hours", 0.0),
+        confirmed_stage=d.get("confirmed_stage", 0),
         source=d.get("source", "preset"),
     )
 
@@ -227,10 +229,13 @@ def cohort_bars_chart(rows: list[dict]) -> go.Figure:
 
 def render_pilot_mode(profile: SimulatorProfile):
     from activity_hub.core.stage_config import compute_stage_mvp
-    stage = compute_stage_mvp(
+    computed = compute_stage_mvp(
         profile.s, profile.t, profile.m, profile.w, profile.a,
         total_hours=profile.total_hours, stb=profile.stb,
     )
+    # confirmed_stage = max(диагностика/декларация, машинный расчёт)
+    # Машина не может опустить ниже подтверждённого пола.
+    stage = max(profile.confirmed_stage, computed) if profile.confirmed_stage else computed
     stage_name = STAGE_NAMES_RU.get(stage, f"Ступень {stage}")
     bn = _bottleneck(profile.s, profile.t, profile.m, profile.w, profile.a,
                      profile.stb, profile.total_hours, stage)

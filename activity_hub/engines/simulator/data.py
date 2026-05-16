@@ -36,10 +36,11 @@ def _t_from_hpw(hours_per_week: float) -> int:
 
 
 async def load_profile(account_id: str, conn) -> SimulatorProfile:
-    """Загрузить bh-профиль пилота из learning.stage_transitions.
+    """Загрузить bh-профиль пилота.
 
-    Читает последний evidence-снимок и парсит bh-значения.
-    Fallback: profile ст.1 если данных нет.
+    confirmed_stage = max(cp_assessments.stage, stage_transitions.to_stage).
+    Правило: машина может только поднять ступень выше подтверждённой диагностом,
+    но не опустить ниже — пока накопленных данных недостаточно.
     """
     row = await conn.fetchrow(
         """
@@ -52,8 +53,25 @@ async def load_profile(account_id: str, conn) -> SimulatorProfile:
         account_id,
     )
 
+    # Подтверждённая ступень из диагностики (пол)
+    cp_row = await conn.fetchrow(
+        """
+        SELECT stage FROM learning.cp_assessments
+        WHERE account_id = $1
+          AND (valid_until IS NULL OR valid_until > NOW())
+        ORDER BY assessed_at DESC
+        LIMIT 1
+        """,
+        account_id,
+    )
+    cp_stage = int(cp_row["stage"]) if cp_row else 0
+
     if row is None:
-        return SimulatorProfile(account_id=account_id, source="no_data")
+        return SimulatorProfile(
+            account_id=account_id,
+            confirmed_stage=cp_stage,
+            source="no_data" if cp_stage == 0 else "cp_only",
+        )
 
     evidence = row["evidence"]
     if isinstance(evidence, str):
@@ -61,14 +79,13 @@ async def load_profile(account_id: str, conn) -> SimulatorProfile:
     if not isinstance(evidence, dict):
         evidence = {}
 
-    # stage_evaluator пишет плоский формат: {"s": 1, "t": 2, "m": 1, "w": 0, "a": 0, "stb": 1, ...}
+    # stage_evaluator пишет плоский формат: {"s": 1, "t": 2, "m": 1, "w": 0, "a": 0, ...}
     s   = int(evidence.get("s", 0))
     t   = int(evidence.get("t", 0))
     m   = int(evidence.get("m", 0))
     w   = int(evidence.get("w", 0))
     a   = int(evidence.get("a", 0))
-    # stb default=5: evaluator не всегда пишет stb в evidence (вычисляет внутренне).
-    # При отсутствии — не блокировать ступень через stb-gate; используем to_stage как якорь.
+    # stb default=5: evaluator не всегда пишет stb в evidence.
     stb = int(evidence.get("stb", 5))
 
     # Сырые метрики
@@ -76,12 +93,16 @@ async def load_profile(account_id: str, conn) -> SimulatorProfile:
     days_per_week  = float(evidence.get("days_per_week", 0.0))
     total_hours    = float(evidence.get("total_hours", 0.0))
 
+    evaluator_stage = int(row["to_stage"])
+    confirmed_stage = max(cp_stage, evaluator_stage)
+
     return SimulatorProfile(
         account_id=account_id,
         s=s, t=t, m=m, w=w, a=a, stb=stb,
         hours_per_week=hours_per_week,
         days_per_week=days_per_week,
         total_hours=total_hours,
+        confirmed_stage=confirmed_stage,
         source="real",
     )
 
