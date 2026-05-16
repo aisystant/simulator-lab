@@ -352,14 +352,29 @@ def render_expert_mode(profile: SimulatorProfile):
     params: dict[str, Any] = {}
 
     if scenario_id == "s1":
-        st.subheader("Параметры поведения")
-        cols = st.columns(3)
-        for i, (code, label, mn, mx, step, default) in enumerate(BH_DIMENSIONS):
+        st.subheader("Ритм занятий")
+        c1, c2, c3 = st.columns(3)
+        # Понятные параметры ритма (первые 3 из BH_DIMENSIONS)
+        for col, (code, label, mn, mx, step, default) in zip(
+            [c1, c2, c3], BH_DIMENSIONS[:3]
+        ):
             current = getattr(profile, code, None) or default
             current = max(mn, min(mx, float(current)))
-            val = cols[i % 3].slider(label, min_value=mn, max_value=mx, value=current,
-                                     step=step, key=f"s1_{code}")
-            params[code] = val
+            params[code] = col.slider(label, min_value=mn, max_value=mx,
+                                      value=current, step=step, key=f"s1_{code}")
+
+        st.subheader("Активность")
+        ca, cb, cc = st.columns(3)
+        lessons   = ca.slider("Уроков в неделю",       0.0, 14.0, 2.0, 0.5, key="s1_les",
+                              help="Уроки, дайджесты, извлечения знаний")
+        wk_closes = cb.slider("Закрытий недели в месяц", 0,  4,   2,   1,   key="s1_wc",
+                              help="Итоги недели, стратегические сессии")
+        rp_month  = cc.slider("РП в месяц",              0.0, 8.0, 1.0, 0.5, key="s1_rp",
+                              help="Закрытых рабочих продуктов")
+        # Конвертируем в дельты: линейная шкала (4 урока/нед ≈ +1 к методичности за ~5 нед)
+        params["m_delta_per_week"] = min(0.25, lessons   * 0.05)
+        params["w_delta_per_week"] = min(0.20, wk_closes * 0.05)
+        params["a_delta_per_week"] = min(0.20, rp_month  * 0.05)
 
     elif scenario_id == "s2":
         st.subheader("Активность в неделю / месяц")
