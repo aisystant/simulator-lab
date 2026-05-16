@@ -1,9 +1,11 @@
-"""Stage Attestor configuration — WP-310 Ф7.
+"""Stage Attestor configuration — WP-310 Ф7-Pack.
 
-# see PD.FORM.089-learner-rcs.md §12.3, iwe-actions-catalog.md §7
+Source-of-truth: PD.FORM.089-learner-rcs.md §12.1–§12.3b (PACK-personal).
+Этот файл — техническое зеркало нормативов Pack-документа.
+Веса событий — iwe-actions-catalog.md §7 (DS-ecosystem-development).
 
-Единое место для нормативов Аттестатора. Изменение порога = правка здесь + рестарт воркера.
-Импортируется из stage_evaluator.py, stage_transition_listener.py, stage_simulator.py.
+Правило изменения: норматив правится сначала в Pack (PD.FORM.089 §12.x),
+затем зеркалится здесь. См. §12.3b «Source-of-truth и синхронизация».
 """
 from __future__ import annotations
 
