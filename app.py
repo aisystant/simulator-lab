@@ -33,7 +33,7 @@ from activity_hub.core.stage_config import (
     S_THRESHOLDS, T_THRESHOLDS, CUMULATIVE_HOURS_GATE, STAGE_GATE_MATRIX, STB_GATE,
 )
 from activity_hub.engines.simulator.base import SimulatorProfile
-from activity_hub.engines.simulator.data import make_preset_profile, _s_from_dpw, _t_from_hpw
+from activity_hub.engines.simulator.data import make_preset_profile
 from activity_hub.engines.simulator.scenarios import ALL_SCENARIOS
 from activity_hub.engines.simulator.scenarios.s1_stage_trajectory import _bottleneck
 
@@ -226,7 +226,6 @@ def cohort_bars_chart(rows: list[dict]) -> go.Figure:
 # ── Pilot Mode ─────────────────────────────────────────────────────────────────
 
 def render_pilot_mode(profile: SimulatorProfile):
-    stage = max(1, profile.s if profile.source == "real" else (profile.t or 1))
     from activity_hub.core.stage_config import compute_stage_mvp
     stage = compute_stage_mvp(
         profile.s, profile.t, profile.m, profile.w, profile.a,
@@ -263,9 +262,11 @@ def render_pilot_mode(profile: SimulatorProfile):
             if idx == stage + 1:
                 dpw_target = threshold
                 break
+        # W-1 fix: для bn="s" target = дни/нед, для остальных = часы/нед
+        target = dpw_target if bn == "s" else (hpw_target or dpw_target or "больше")
         try:
             next_step = next_step.format(
-                target=hpw_target or dpw_target or "больше",
+                target=target,
                 current=profile.hours_per_week or 0,
             )
         except (KeyError, ValueError):
@@ -287,13 +288,22 @@ def render_pilot_mode(profile: SimulatorProfile):
         key="pilot_text_input",
     )
     if text_input:
-        with st.spinner("Анализирую..."):
-            parsed = _parse_text_input(text_input)
+        # W-2 fix: кешируем результат парсера в session_state чтобы не дёргать LLM при каждом ре-рендере
+        if st.session_state.get("_last_parsed_text") != text_input:
+            with st.spinner("Анализирую..."):
+                parsed = _parse_text_input(text_input)
+            st.session_state["_last_parsed_text"] = text_input
+            st.session_state["_last_parsed_result"] = parsed
+        parsed = st.session_state.get("_last_parsed_result")
 
         if parsed:
             if parsed["fallback_sliders"]:
                 st.caption(f"Не смог точно распознать параметры (уверенность {parsed['confidence']:.0%}). "
                            "Попробуйте переключиться в режим Эксперт для ручной настройки.")
+            # W-3 fix: S2/S3 сценарии в Pilot mode не поддерживаются — показать подсказку
+            elif parsed["scenario_id"] != "s1":
+                st.caption(f"Распознано: {parsed['explanation']} "
+                           "Этот сценарий доступен в режиме Эксперт.")
             else:
                 st.caption(f"Распознано: {parsed['explanation']}")
                 overrides = parsed["bh_overrides"]
