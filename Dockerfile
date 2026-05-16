@@ -6,8 +6,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-ENV GIT_TERMINAL_PROMPT=0
-RUN pip install --no-cache-dir -r requirements.txt
+# GITHUB_TOKEN нужен для pip install приватного activity-hub
+ARG GITHUB_TOKEN
+RUN if [ -n "$GITHUB_TOKEN" ]; then \
+      git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
+    fi
+RUN pip install --no-cache-dir -r requirements.txt && \
+    git config --global --unset url."https://github.com/".insteadOf 2>/dev/null || true
 
 COPY app.py .
 
