@@ -1036,7 +1036,7 @@ def calc_it_level(collected: dict) -> dict:
     coding_hours_30d = coding_seconds_30d / 3600
     coding_active_days = coding.get('coding_active_days_30d', 0) or 0
     commits_30d = iwe.get('commits_30d', 0) or 0
-    day_opens = iwe.get('day_opens_total', 0) or 0
+    day_opens = iwe.get('day_opens_30d', 0) or 0
     ai_chats = time_data.get('ai_chats_total', 0) or 0
 
     evidence = {
