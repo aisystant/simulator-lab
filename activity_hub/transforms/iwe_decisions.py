@@ -1,4 +1,4 @@
-# see DP.SC.025, DP.ROLE.001#R29
+# see DP.SC.025, DP.ROLE.001#R47
 """Transform: IWE decision raw_events.payload → ParsedEvent (silver-слой).
 
 WP-109 Ф7b. Обрабатывает события decision_user, записанные capture-bus.sh

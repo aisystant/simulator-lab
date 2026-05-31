@@ -1,4 +1,4 @@
-# see DP.SC.025, DP.ROLE.001#R29
+# see DP.SC.025, DP.ROLE.001#R47
 """Transform-worker — silver pipeline: raw_events → user_events.
 
 WP-109 Ф8.4. Читает строки development.raw_events WHERE transform_status='pending',

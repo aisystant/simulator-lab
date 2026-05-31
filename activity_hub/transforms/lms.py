@@ -1,4 +1,4 @@
-# see DP.SC.025, DP.ROLE.001#R29
+# see DP.SC.025, DP.ROLE.001#R47
 """Transform: LMS raw_events.payload → ParsedEvent (silver-слой).
 
 WP-109 Ф8.4. Логика парсинга вынесена из adapters/lms.py._parse_action.
