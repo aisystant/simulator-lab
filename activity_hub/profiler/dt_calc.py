@@ -6,7 +6,7 @@ Calculation Engine v1.0 — derived indicators из 2_collected + learning_histo
 
 Индикаторы:
   IND.3.1.02  slot_regularity        — доля активных дней (→ агентность)
-  IND.3.4.01  student_stage           — ступень ученика (0-4, threshold rules)
+  IND.3.4.01  student_stage           — ступень ученика (1-5, threshold rules)
   IND.3.10.1  integral_agency_index   — агрегированный индекс (0-100)
   IND.3.5.*   mastery_by_area         — BKT P(mastery) по 5 областям из learning_history
   IND.3.6.*   worldview_gaps          — мемы CAT.001 с gap (P(mastery) < порога по ступени)
@@ -51,33 +51,33 @@ logger = logging.getLogger(__name__)
 # STUDENT STAGES (PD.FORM.003)
 # ═══════════════════════════════════════════════════════════
 
-STAGE_RANDOM = 0        # Случайный
-STAGE_PRACTICING = 1    # Практикующий
-STAGE_SYSTEMATIC = 2    # Систематический
-STAGE_DISCIPLINED = 3   # Дисциплинированный
-STAGE_PROACTIVE = 4     # Проактивный
+STAGE_RANDOM = 1        # Случайный
+STAGE_PRACTICING = 2    # Практикующий
+STAGE_SYSTEMATIC = 3    # Систематический
+STAGE_DISCIPLINED = 4   # Дисциплинированный
+STAGE_PROACTIVE = 5     # Проактивный
 
 STAGE_NAMES = {
-    0: "STG.Student.Random",
-    1: "STG.Student.Practicing",
-    2: "STG.Student.Systematic",
-    3: "STG.Student.Disciplined",
-    4: "STG.Student.Proactive",
+    1: "STG.Student.Random",
+    2: "STG.Student.Practicing",
+    3: "STG.Student.Systematic",
+    4: "STG.Student.Disciplined",
+    5: "STG.Student.Proactive",
 }
 
 STAGE_NAMES_RU = {
-    0: "Случайный",
-    1: "Практикующий",
-    2: "Систематический",
-    3: "Дисциплинированный",
-    4: "Проактивный",
+    1: "Случайный",
+    2: "Практикующий",
+    3: "Систематический",
+    4: "Дисциплинированный",
+    5: "Проактивный",
 }
 
 
 # ═══════════════════════════════════════════════════════════
 # Ф5: CAT.001 каталог мемов (BKT-данные для GAP-профиля)
 # Источник: DS-principles-curriculum/data/curriculum/CAT.001/
-# Формат: {meme_id: {area: int 1-5, entry_stage: int 0-4}}
+# Формат: {meme_id: {area: int 1-5, entry_stage: int 1-5}}
 # ═══════════════════════════════════════════════════════════
 
 _CAT001_META: dict[str, dict] = {
@@ -149,17 +149,17 @@ _CAT001_META: dict[str, dict] = {
 
 # Нормативная целевая глубина мемов по ступени и области (PD.FORM.080 §9).
 # target_depth[student_stage][area] = int 1-3 (макс. глубина мема по фазе)
-# Ступень 0 (Случайный): цель depth=1 только по ведущим осям (1=Знания, 5=Организм)
-# Ступень 1→2 (Практикующий): ведущие оси 2=Инструменты, 3=Ограничения → depth=1 все
-# Ступень 2→3 (Систематический): depth=2 для Знания(1), Ограничения(3), Окружение(4)
-# Ступень 3→4 (Дисциплинированный): depth=3 для Знания(1), Окружение(4)
-# Ступень 4 (Проактивный): depth=3 для всех
+# Ступень 1 (Случайный): цель depth=1 только по ведущим осям (1=Знания, 5=Организм)
+# Ступень 2 (Практикующий): ведущие оси 2=Инструменты, 3=Ограничения → depth=1 все
+# Ступень 3 (Систематический): depth=2 для Знания(1), Ограничения(3), Окружение(4)
+# Ступень 4 (Дисциплинированный): depth=3 для Знания(1), Окружение(4)
+# Ступень 5 (Проактивный): depth=3 для всех
 _TARGET_DEPTH: dict[int, dict[int, int]] = {
-    0: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
     1: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
-    2: {1: 2, 2: 1, 3: 2, 4: 2, 5: 1},
-    3: {1: 3, 2: 2, 3: 2, 4: 3, 5: 2},
-    4: {1: 3, 2: 3, 3: 3, 4: 3, 5: 3},
+    2: {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
+    3: {1: 2, 2: 1, 3: 2, 4: 2, 5: 1},
+    4: {1: 3, 2: 2, 3: 2, 4: 3, 5: 2},
+    5: {1: 3, 2: 3, 3: 3, 4: 3, 5: 3},
 }
 
 
@@ -347,11 +347,11 @@ def calc_mastery_by_area(learning_rows: list[dict]) -> dict:
 
 # Порог P(mastery) по ступени: чем выше ступень, тем строже требование.
 _MASTERY_THRESHOLD_BY_STAGE: dict[int, float] = {
-    0: 0.6,
-    1: 0.65,
-    2: 0.7,
-    3: 0.8,
-    4: 0.9,
+    1: 0.6,
+    2: 0.65,
+    3: 0.7,
+    4: 0.8,
+    5: 0.9,
 }
 
 
@@ -364,7 +364,7 @@ def calc_worldview_gaps(learning_rows: list[dict], student_stage: int) -> list[d
 
     Args:
         learning_rows: записи из learning_history (element_type='meme')
-        student_stage: текущая ступень (0-4)
+        student_stage: текущая ступень (1-5)
 
     Returns:
         list[dict] — мемы с gap, отсортированные по area.
@@ -374,7 +374,7 @@ def calc_worldview_gaps(learning_rows: list[dict], student_stage: int) -> list[d
     """
     bkt = _calc_bkt_per_meme(learning_rows)
     threshold = _MASTERY_THRESHOLD_BY_STAGE.get(student_stage, 0.7)
-    target_map = _TARGET_DEPTH.get(student_stage, _TARGET_DEPTH[0])
+    target_map = _TARGET_DEPTH.get(student_stage, _TARGET_DEPTH[1])
     gaps = []
 
     for meme_id, meta in _CAT001_META.items():
@@ -579,9 +579,8 @@ def calc_rcs_indices(rcs: dict) -> dict:
 def check_rcs_stage(rcs: dict, indices: dict) -> int:
     """Определить ступень по RCS-индексам (SR.001-SR.004 логика).
 
-    Возвращает максимальную ступень (0-4 в системе dt_calc, соотв. 1-5 в SR-нотации).
-    SR использует нотацию 1-5; dt_calc — 0-4 (STAGE_RANDOM..STAGE_PROACTIVE).
-    Маппинг: SR-ст.1=STAGE_RANDOM(0), SR-ст.2=STAGE_PRACTICING(1), ...
+    Возвращает максимальную ступень (1-5, canonical PD.FORM.003).
+    Раньше (pre-WP-380) использовался 0-4; миграция завершена.
     """
     m1 = indices["M1"]["idx"]
     m2 = indices["M2"]["idx"]
@@ -652,7 +651,7 @@ def calc_student_stage(collected: dict, as_of: Optional[datetime] = None) -> dic
 
     Returns:
         {
-            "stage": int (0-4),
+            "stage": int (1-5),
             "stage_id": "STG.Student.Random",
             "stage_name_ru": "Случайный",
             "path": "rcs" | "legacy",
@@ -1080,9 +1079,9 @@ def calc_delivery_style(collected: dict, student_stage: int) -> dict:
     Авто-адаптация: если поведение указывает на другой стиль, чем заявленный.
 
     Логика:
-    - Ступень 0-1: detailed + examples, 15-20 мин
-    - Ступень 2: mixed, 20-30 мин
-    - Ступень 3-4: concise + tasks, 30-60 мин
+    - Ступень 1-2: detailed + examples, 15-20 мин
+    - Ступень 3: mixed, 20-30 мин
+    - Ступень 4-5: concise + tasks, 30-60 мин
 
     Коррекция по данным: если пользователь быстро проходит уроки → сократить.
     Если часто просит подробности → расширить.
@@ -1102,11 +1101,11 @@ def calc_delivery_style(collected: dict, student_stage: int) -> dict:
     practice_ratio = marathon_tasks / max(marathon_steps, 1)
 
     # Базовый стиль по ступени
-    if student_stage <= 1:
+    if student_stage <= 2:
         fmt = "detailed"
         duration = 20
         complexity = "accessible"
-    elif student_stage == 2:
+    elif student_stage == 3:
         fmt = "mixed"
         duration = 25
         complexity = "standard"
@@ -1266,7 +1265,7 @@ def calc_learning_autonomy(collected: dict, student_stage: int) -> dict:
     diversity_score = min(modes_used / 3 * 100, 100)  # 3 из 4 = 100%
 
     # 4. Ступень baseline (25%): Stage прямо отражает автономность
-    stage_score = min(student_stage / 4 * 100, 100)
+    stage_score = min(student_stage / 5 * 100, 100)
 
     score = (
         initiative_score * 0.30
@@ -1565,7 +1564,7 @@ def calculate_derived(data: dict, learning_rows: list[dict] | None = None, event
         stage_result = calc_student_stage(collected, as_of=now)
         agency_result = calc_integral_agency_index(collected, as_of=now)
         regularity = calc_slot_regularity(collected, as_of=now)
-        student_stage = stage_result.get("stage", 0)
+        student_stage = stage_result.get("stage", 1)
 
         # ── Ф3/Ф8.3: IND.3.2.04 мультипликатор (7d rolling) ─────────────────
         today_str = now.strftime("%Y-%m-%d")
