@@ -13,8 +13,8 @@
 """
 
 # Версия конфига — менять при любой правке констант (аналог CONFIG_VERSION в stage_config.py)
-REWARD_CONFIG_VERSION = "v1"
-REWARD_CONFIG_DATE = "2026-05-16"
+REWARD_CONFIG_VERSION = "v2"
+REWARD_CONFIG_DATE = "2026-06-19"
 
 # ── Базовые суммы начисления (reference.reward_rules.amount) ─────────────────
 # Ключ = event_type. Значение = базовая сумма в баллах ДО применения множителей.
@@ -168,26 +168,53 @@ STAGE_DAILY_CAP: dict[int, float] = {
 # ── Streak-eligible event types (reference.reward_rules.streak_eligible) ─────
 # Seed: 204-reward-rules-streak-eligible.sql
 
+# see DP.D.155: any user action in any interface = active day (решение пилота 2026-06-19)
 STREAK_ELIGIBLE: frozenset[str] = frozenset({
+    # IWE
+    "iwe_session",
+    "day_close",
+    "session_complete",
+    "work_session",
+    "slot_logged",
+    "pack_updated",
+    "wp_completed",
+    "wp_closed",
+    "wp_created",
+    "strategy_session_completed",
+    # Git / контент
     "coding_time",
     "commit_created",
+    "git_commit",
+    "content_published",
+    "fmt_commit_merged",
+    # LMS — освоение
     "lesson_completed",
+    "tailor_lesson_completed",
+    "learning_completed",
     "training_attempt",
-    "pomodoro_completed",
-    "knowledge_extracted",
-    "note_to_capture",
-    "distinction_added",
-    "method_described",
-    "ai_chat",
-    "ai_interaction",
-    "marathon_step",
-    "marathon_task",
+    "training_passed",
+    "assessment_completed",
     "task_submitted",
     "text_submitted",
     "table_submitted",
     "feed_completed",
+    "marathon_step",
+    "marathon_task",
+    "workbook_push",
     "comment_created",
+    "topic_created",
     "test_passed",
-    "assessment_completed",
-    "learning_completed",
+    # AI
+    "ai_chat",
+    "ai_interaction",
+    # KE и Pack
+    "knowledge_extracted",
+    "note_to_capture",
+    "distinction_added",
+    "method_described",
+    "pomodoro_completed",
+    # Клуб
+    "club_post_created",
+    "club_topic_created",
+    "club_like_created",
 })
