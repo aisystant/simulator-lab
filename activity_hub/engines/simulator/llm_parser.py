@@ -24,12 +24,20 @@ _client: anthropic.AsyncAnthropic | None = None
 
 def _get_client() -> anthropic.AsyncAnthropic:
     global _client
-    if _client is None:
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise EnvironmentError(
-                "ANTHROPIC_API_KEY не задан. Установите переменную окружения."
-            )
+    if _client is not None:
+        return _client
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise EnvironmentError(
+            "ANTHROPIC_API_KEY не задан. Установите переменную окружения."
+        )
+    if os.environ.get("LANGFUSE_SECRET_KEY"):
+        try:
+            from langfuse.anthropic import anthropic as _lf_anthropic
+            _client = _lf_anthropic.AsyncAnthropic(api_key=api_key)
+        except ImportError:
+            _client = anthropic.AsyncAnthropic(api_key=api_key)
+    else:
         _client = anthropic.AsyncAnthropic(api_key=api_key)
     return _client
 
