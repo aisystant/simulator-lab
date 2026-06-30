@@ -31,14 +31,7 @@ def _get_client() -> anthropic.AsyncAnthropic:
         raise EnvironmentError(
             "ANTHROPIC_API_KEY не задан. Установите переменную окружения."
         )
-    if os.environ.get("LANGFUSE_SECRET_KEY"):
-        try:
-            from langfuse.anthropic import anthropic as _lf_anthropic
-            _client = _lf_anthropic.AsyncAnthropic(api_key=api_key)
-        except ImportError:
-            _client = anthropic.AsyncAnthropic(api_key=api_key)
-    else:
-        _client = anthropic.AsyncAnthropic(api_key=api_key)
+    _client = anthropic.AsyncAnthropic(api_key=api_key)
     return _client
 
 
@@ -279,3 +272,13 @@ async def parse_scenario_text(text: str) -> dict[str, Any]:
         "explanation": tool_input.get("explanation", ""),
         "fallback_sliders": confidence < CONFIDENCE_THRESHOLD,
     }
+
+
+# Enable LangFuse tracing if configured (langfuse v4 @observe, graceful fallback)
+if os.environ.get("LANGFUSE_SECRET_KEY"):
+    try:
+        from langfuse.decorators import observe as _lf_observe
+        parse_scenario_text = _lf_observe(parse_scenario_text)
+        logger.info("[LLM Parser] LangFuse tracing enabled")
+    except ImportError:
+        logger.warning("[LLM Parser] langfuse not installed — tracing disabled")
