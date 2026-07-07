@@ -10,6 +10,7 @@ Downstream (Ф3, реализован):
   2. Уведомление пилоту в бот (@aist_me_bot) — telegram_id из persona.ory_identity
   3. INSERT в learning.guide_render_queue → render-pilot-guides подхватит (WP-309 Ф7)
   4. Целевой ритм — включён в текст уведомления пилоту
+  5. mastery_unlocked → event-gateway (WP-457 Ф10, проекция в public.user_axis_state)
 
 Архитектура (паттерн profiler_subscriber_neon):
   - Polling cursor в public.stage_listener_cursor (self-bootstrapping, CREATE TABLE IF NOT EXISTS).
@@ -27,6 +28,7 @@ Env vars:
   AIST_BOT_TOKEN               — Telegram bot token (для уведомлений)
   STAGE_LISTENER_POLL_INTERVAL — интервал polling в секундах (default: 60)
   STAGE_LISTENER_BATCH         — размер батча (default: 100)
+  EVENT_GATEWAY_URL            — POST-адрес event-gateway (WP-457 Ф10; без него — stub, warning в лог)
 
 Запуск:
   python runner.py stage-transition-listener
@@ -330,6 +332,59 @@ async def _trigger_personal_guide_render(
     )
 
 
+async def _emit_mastery_unlocked_event(
+    account_id: str, from_stage: int, to_stage: int, transition_id: _uuid_module.UUID
+) -> None:
+    """WP-457 Ф10: эмиссия mastery_unlocked в event-gateway (проекция в public.user_axis_state).
+
+    learning.stage_transitions остаётся SoT самого перехода — этот POST лишь
+    зеркалит факт в общий журнал состояний (domain_event), откуда его читает
+    adapter в event-gateway (see DS-MCP/event-gateway/src/state-transition-adapters.ts).
+    Отключено если EVENT_GATEWAY_URL не задан — переход всё равно зафиксирован
+    в learning.stage_transitions, это только доп. проекция.
+    """
+    gateway_url = os.environ.get("EVENT_GATEWAY_URL")
+    if not gateway_url:
+        log.info(
+            "[STUB] mastery_unlocked emit skipped: account=%s %d→%d (EVENT_GATEWAY_URL not set)",
+            account_id[:8], from_stage, to_stage,
+        )
+        return
+
+    body = {
+        "source": "stage-transition-listener",
+        "event_type": "mastery_unlocked",
+        "schema_version": "v1",
+        "external_id": f"mastery-{transition_id}",
+        "occurred_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "account_id": account_id,
+        "payload": {
+            "stage_from": _STAGE_IDS.get(from_stage, "STG.Student.Unknown"),
+            "stage_to": _STAGE_IDS.get(to_stage, "STG.Student.Unknown"),
+        },
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                gateway_url,
+                json=body,
+                headers={"User-Agent": "stage-transition-listener/1.0"},  # CF Bot Fight Mode блокирует default UA
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status not in (200, 201):
+                    text = await resp.text()
+                    log.warning(
+                        "event-gateway HTTP %d for mastery_unlocked account=%s: %s",
+                        resp.status, account_id[:8], text[:200],
+                    )
+    except Exception as exc:
+        log.warning(
+            "event-gateway emit failed for mastery_unlocked account=%s: %s",
+            account_id[:8], exc,
+        )
+
+
 async def _update_weekly_rhythm(account_id: str, to_stage: int) -> None:
     """Stub: ритм включён в уведомление пилоту; файловое обновление — WP-310 Ф8."""
     target_hours = _TARGET_HOURS.get(to_stage, 4)
@@ -359,6 +414,7 @@ async def _dispatch_downstream(
     await _notify_pilot(account_id, from_stage, to_stage, evidence)
     await _trigger_personal_guide_render(account_id, to_stage, conn)
     await _update_weekly_rhythm(account_id, to_stage)
+    await _emit_mastery_unlocked_event(account_id, from_stage, to_stage, row["id"])
 
 
 # ---------------------------------------------------------------------------
