@@ -49,15 +49,29 @@ jobs:
           fi
           echo 'PASS: no new Cyrillic introduced.'
 
-      - name: Cyrillic gate — commit messages
-        # Checks only the pushed commit's own message, not a base..head range:
-        # base can be the empty-tree sentinel (a tree, not a commit), which a
+      - name: Cyrillic gate — names of files added or renamed by this change
+        # Same diff scope as the content check above: only files this push
+        # itself introduces or renames, not every pre-existing path.
+        run: |
+          base="${{ steps.range.outputs.base }}"
+          head="${{ steps.range.outputs.head }}"
+          names=$(git diff --name-status "$base" "$head" -- . | grep -P '^[AR]' | cut -f2- | grep -P '[\x{0400}-\x{04FF}\x{0500}-\x{052F}]' || true)
+          if [ -n "$names" ]; then
+            echo '::error::New or renamed file has a Cyrillic name -- this repository is English-only going forward.'
+            printf '%s\n' "$names"
+            exit 1
+          fi
+          echo 'PASS: no new Cyrillic file names.'
+
+      - name: Cyrillic gate — commit message and author identity
+        # Checks only the pushed commit itself, not a base..head range: base
+        # can be the empty-tree sentinel (a tree, not a commit), which a
         # commit range cannot use.
         run: |
           head="${{ steps.range.outputs.head }}"
-          messages="$(git log -1 --format=%B "$head")"
-          if printf '%s' "$messages" | grep -qP '[\x{0400}-\x{04FF}\x{0500}-\x{052F}]'; then
-            echo '::error::Commit message contains Cyrillic -- this repository is English-only going forward.'
+          details="$(git log -1 --format='%B%n%an%n%ae' "$head")"
+          if printf '%s' "$details" | grep -qP '[\x{0400}-\x{04FF}\x{0500}-\x{052F}]'; then
+            echo '::error::Commit message or author name/email contains Cyrillic -- this repository is English-only going forward.'
             exit 1
           fi
-          echo 'PASS: commit messages contain no Cyrillic.'
+          echo 'PASS: commit message and author identity contain no Cyrillic.'
