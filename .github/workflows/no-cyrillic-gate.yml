@@ -14,17 +14,20 @@ jobs:
 
       - name: Resolve diff range
         id: range
+        # pull_request has a well-defined base/head. For push, the event's
+        # "before" is unusable as a base: it is all-zero on a new branch
+        # (falling back to the repo's root commit would diff the entire
+        # history, catching every pre-existing Cyrillic file) and can point
+        # at a commit this fetch no longer has after a force-push/amend
+        # (git diff/log would fail with "bad object"). The new commit's own
+        # parent answers "what did this push actually add" in every case.
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
             head="${{ github.event.pull_request.head.sha }}"
           else
-            base="${{ github.event.before }}"
             head="${{ github.event.after }}"
-            case "$base" in
-              ""|0000000000000000000000000000000000000000)
-                base="$(git rev-list --max-parents=0 "$head" | tail -1)" ;;
-            esac
+            base="$(git rev-parse -q --verify "${head}^" || echo 4b825dc642cb6eb9a060e54bf8d69288fbee4904)"
           fi
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "head=$head" >> "$GITHUB_OUTPUT"
@@ -47,10 +50,12 @@ jobs:
           echo 'PASS: no new Cyrillic introduced.'
 
       - name: Cyrillic gate — commit messages
+        # Checks only the pushed commit's own message, not a base..head range:
+        # base can be the empty-tree sentinel (a tree, not a commit), which a
+        # commit range cannot use.
         run: |
-          base="${{ steps.range.outputs.base }}"
           head="${{ steps.range.outputs.head }}"
-          messages="$(git log "$base..$head" --format=%B)"
+          messages="$(git log -1 --format=%B "$head")"
           if printf '%s' "$messages" | grep -qP '[\x{0400}-\x{04FF}\x{0500}-\x{052F}]'; then
             echo '::error::Commit message contains Cyrillic -- this repository is English-only going forward.'
             exit 1
